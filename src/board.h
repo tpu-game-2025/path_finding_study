@@ -46,10 +46,21 @@ public:
 		INVALID,	// 無効な値
 	};
 private:
+	bool is_closed_ = false;//クローズドリストに入れられたか
+	int steps_ = -1;//始点からの歩数
+	Point parent_;//どこから来たのか
 	static std::map<status, MassInfo> statusData;
 	status s_ = BLANK;
 
 public:
+	void visit(const Point& parent, Mass& parentMass)//引数にはどのマスから来たかを入れる
+	{
+		parent_ = parent; steps_ = parentMass.getSteps() + 1;
+	}
+	void close() { is_closed_ = true; }//クローズドリストに入れる(クローズドにする)
+	bool isClosed() const { return is_closed_; }//クローズドしたかを教える
+	int getSteps() const { return steps_; }//始点からの歩数を教える
+	Point& getParent() { return parent_; }//どこから来たのかを教える
 	void set(status s) { s_ = s; }
 	void set(char c) {// cの文字を持つstatusを検索して設定する（重い）
 		s_ = INVALID;// 見つからなった際の値

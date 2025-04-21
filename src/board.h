@@ -94,6 +94,8 @@ private:
 		}
 	}
 
+	//void chasePath(const Point& start, const Point& goal, std::vector<std::vector<Mass>>& mass) const;//通った道をたどって印をつけていく
+
 public:
 	Board(const std::vector<std::string>& map_data) {initialize(map_data);}
 	~Board() {}

@@ -19,18 +19,18 @@ std::map<Mass::status, MassInfo> Mass::statusData =
 
 bool Board::find(const Point& 始点, const Point& 終点, std::vector<std::vector<Mass>> &mass) const
 {
-	std::multimap<int,Point> q;//オープンリスト(始点からの距離(歩数)、マスの位置)
+	std::multimap<float,Point> q;//オープンリスト(始点からの歩数＋終点とそのマスの距離、マスの位置),(A*では始点からの歩数＋キーを終点とそのマスの距離で管理)
 	mass[始点.y][始点.x].visit(始点, mass[始点.y][始点.x]);
 
 	//始点をオープンリストに追加
-	q.insert({ 0,始点 });
+	q.insert({ Point::distance(始点,終点),始点});
 
 	while (!q.empty())//qが空になったら終点にたどり着けなかったということ
 	{
 		//最も始点から最短距離で行けるマスを調べる
-		int distance = q.begin()->first;
 		Point 現在 = q.begin()->second;
 		Mass& 現在のマス = mass[現在.y][現在.x];//現在のマス
+		int distance = 現在のマス.getSteps();
 		//調べるマスをオープンリストからクローズドリストに
 		q.erase(q.begin());
 		現在のマス.close();
@@ -46,7 +46,8 @@ bool Board::find(const Point& 始点, const Point& 終点, std::vector<std::vect
 			//次の(調査)マスが行けるところかつまだクローズドしてないマスを調べる
 			if (次のマス.canMove() && !次のマス.isClosed())
 			{
-				int 始点からの歩数 = distance + 1;
+				float 始点からの歩数 = static_cast<float>(distance) + 次のマス.getCost();
+
 				int 以前の歩数 = 次のマス.getSteps();
 
 				if (0 <= 以前の歩数)//既に訪れていたなら
@@ -58,8 +59,7 @@ bool Board::find(const Point& 始点, const Point& 終点, std::vector<std::vect
 					
 					//今回の方が近かったら...
 					//キューから一旦削除(後で新しく追加)
-					auto a = q.equal_range(以前の歩数);
-					for (auto it = a.first; it != a.second; it++)
+					for (auto it = q.begin(); it != q.end(); it++)
 					{
 						if (it->second == 次) { q.erase(it); break; }
 					}
@@ -67,9 +67,7 @@ bool Board::find(const Point& 始点, const Point& 終点, std::vector<std::vect
 
 				//調査マスを訪れ、キューに追加
 				次のマス.visit(現在,現在のマス);
-				q.insert({始点からの歩数, 次});
-
-				//std::cout << 次のマス.getSteps() << std::endl;//確認用
+				q.insert({始点からの歩数+Point::distance(次,終点), 次});
 
 				//次のマスが終点なら...
 				//終点から始点までたどりながらWaypointをつけていく(始点と終点はつけない)
@@ -96,3 +94,5 @@ bool Board::find(const Point& 始点, const Point& 終点, std::vector<std::vect
 
 	return false;
 }
+
+

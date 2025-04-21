@@ -48,18 +48,27 @@ public:
 private:
 	static std::map<status, MassInfo> statusData;
 	status s_ = BLANK;
+	float steps_ = INFINITY;
+	Point parent_;
 
 public:
-	void set(status s) { s_ = s; }
-	void set(char c) {// cの文字を持つstatusを検索して設定する（重い）
+	void setStatus(status s) { s_ = s; }
+	void setStatus(char c) {// cの文字を持つstatusを検索して設定する（重い）
 		s_ = INVALID;// 見つからなった際の値
 		for (auto& x : statusData) { if (x.second.chr == c) { s_ = x.first; return; } }
 	}
+	void setSteps(float step) { steps_ = step; }
 
 	const std::string getText() const { return std::string{ statusData[s_].chr}; }
 
 	bool canMove() const { return 0 <= statusData[s_].cost; }
 	float getCost() const { return statusData[s_].cost; }
+	float getSteps() const { return steps_; }
+	Point& getParent() { return parent_; }
+
+	void visit(const Point& parent, float steps) {
+		parent_ = parent; steps_ = std::min(steps_, steps);
+	}
 };
 
 class Board {
@@ -78,7 +87,7 @@ private:
 
 			assert(map_data[y].size() == 横);// 整合性チェック
 			for(int x = 0; x < 横; x++) {
-				map_[y][x].set(map_data[y][x]);
+				map_[y][x].setStatus(map_data[y][x]);
 			}
 		}
 	}

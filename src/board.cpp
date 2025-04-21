@@ -5,7 +5,7 @@ std::map<Mass::status, MassInfo> Mass::statusData =
 {
 	{ BLANK, { 1.0f, ' '}},
 	{ WALL,  {-1.0f, '#'}},
-	{ WATER, { 1.5f, '~'}},
+	{ WATER, { 3.0f, '~'}},
 	{ ROAD,  { 0.3f, '$'}},
 
 	// 動的な要素
@@ -20,10 +20,11 @@ std::map<Mass::status, MassInfo> Mass::statusData =
 bool Board::find(const Point& 始点, const Point& 終点, std::vector<std::vector<Mass>> &mass) const
 {
 	std::multimap<float,Point> q;//オープンリスト(始点からの歩数＋終点とそのマスの距離、マスの位置),(A*では始点からの歩数＋キーを終点とそのマスの距離で管理)
-	mass[始点.y][始点.x].visit(始点, mass[始点.y][始点.x], mass[始点.y][始点.x].getCost());
+	Mass& 始点マス = mass[始点.y][始点.x];
+	始点マス.visit(始点, 始点マス, 始点マス.getCost());
 
 	//始点をオープンリストに追加
-	q.insert({ Point::distance(始点,終点),始点});
+	q.insert({ 始点マス.getSteps() + 始点マス.getCost() + Point::distance(始点,終点),始点});
 
 	while (!q.empty())//qが空になったら終点にたどり着けなかったということ
 	{

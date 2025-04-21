@@ -18,7 +18,7 @@ int main()
 		"############",// b
 	};
 	Board board(map_data);
-
+	
 	// 経路探索
 	Point 始点 = { 9, 9 };
 	Point 終点 = { 2, 2 };

@@ -47,19 +47,21 @@ public:
 	};
 private:
 	bool is_closed_ = false;//クローズドリストに入れられたか
-	int steps_ = -1;//始点からの歩数
+	bool is_visited_ = false;//訪れたか
+	float steps_ = -1;//始点からの歩数(コストを考慮するのでfloat型で)
 	Point parent_;//どこから来たのか
 	static std::map<status, MassInfo> statusData;
 	status s_ = BLANK;
 
 public:
-	void visit(const Point& parent, Mass& parentMass)//引数にはどのマスから来たかを入れる
+	void visit(const Point& parent, Mass& parentMass, float cost)//引数にはどのマスから来たかを入れる
 	{
-		parent_ = parent; steps_ = parentMass.getSteps() + 1;
+		parent_ = parent; steps_ = parentMass.getSteps() + cost; is_visited_ = true;
 	}
 	void close() { is_closed_ = true; }//クローズドリストに入れる(クローズドにする)
+	bool isVisited() const { return is_visited_; }//訪れたかを教える
 	bool isClosed() const { return is_closed_; }//クローズドしたかを教える
-	int getSteps() const { return steps_; }//始点からの歩数を教える
+	float getSteps() const { return steps_; }//始点からの歩数を教える
 	Point& getParent() { return parent_; }//どこから来たのかを教える
 	void set(status s) { s_ = s; }
 	void set(char c) {// cの文字を持つstatusを検索して設定する（重い）
@@ -94,7 +96,7 @@ private:
 		}
 	}
 
-	//void chasePath(const Point& start, const Point& goal, std::vector<std::vector<Mass>>& mass) const;//通った道をたどって印をつけていく
+	void chasePath(const Point& start, const Point& goal, std::vector<std::vector<Mass>>& mass) const;//通った道をたどって印をつけていく
 
 public:
 	Board(const std::vector<std::string>& map_data) {initialize(map_data);}

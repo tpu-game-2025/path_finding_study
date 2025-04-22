@@ -16,22 +16,63 @@ std::map<Mass::status, MassInfo> Mass::statusData =
 };
 
 
-bool Board::find(const Point& 始点, const Point& 終点, std::vector<std::vector<Mass>> &mass) const
+bool Board::find(const Point& start, const Point& goal, std::vector<std::vector<Mass>>& mass) const
 {
-	mass[始点.y][始点.x].set(Mass::START);
-	mass[終点.y][終点.x].set(Mass::GOAL);
+	mass[start.y][start.x].setStatus(Mass::START);
+	mass[goal.y][goal.x].setStatus(Mass::GOAL);
+
+	std::multimap<float, std::pair<Point, float>> q;	//multimapで優先度付きキューを実装
+	mass[start.y][start.x].visit(start, 0.0f);
+	q.insert({ Point::distance(start,goal), {start,0.0f} });
 
 	// 経路探索
-	Point 現在 = 始点;
-	while (現在 != 終点) {
-		// 歩いた場所に印をつける(見やすさのために始点は書き換えない)
-		if (現在 != 始点){mass[現在.y][現在.x].set(Mass::WAYPOINT);}
+	while (!q.empty()) {
+		auto current = q.begin()->second.first;
+		auto qSteps = q.begin()->second.second;
+		q.erase(q.begin());
 
-		// 終点に向かって歩く
-		if (現在.x < 終点.x) { 現在.x++; continue; }
-		if (終点.x < 現在.x) { 現在.x--; continue; }
-		if (現在.y < 終点.y) { 現在.y++; continue; }
-		if (終点.y < 現在.y) { 現在.y--; continue; }
+		auto currentSteps = mass[current.y][current.x].getSteps();
+		if (currentSteps < qSteps) continue;	// 以前の方が距離が短い
+
+		const static Point moveValue[] = { {-1,0},{1,0},{0,-1},{0,1} };
+		for (const auto& move : moveValue) {
+
+			auto next = current + move;
+			auto& nextmass = mass[next.y][next.x];
+			if (!nextmass.canMove() && next != goal) continue;
+
+			auto pastSteps = nextmass.getSteps();
+			auto nextSteps = currentSteps + nextmass.getCost();
+			if (pastSteps <= nextSteps) continue;	// 以前の方が距離が短い
+
+			nextmass.visit(current, nextSteps);
+			q.insert({ nextSteps + Point::distance(next,goal), {next,nextSteps} });
+
+			if (next != goal) continue;
+			auto goalSteps = nextmass.getSteps();
+			if (goalSteps < q.begin()->first) break;	// 最も小さい評価値よりも小さいなら十分適切とみなす
+
+
+			// 確実に最適解であることを保証する確認
+			// queueにある全てのsteps値がgoalのものより大きいか調べる
+			//bool isOptimal = true;
+			//for (auto i : q) {
+			//	if (goalSteps > i.second.second)
+			//		isOptimal = false;
+			//}
+			//if (isOptimal) break;
+		}
+	}
+
+	auto goalmass = mass[goal.y][goal.x];
+	if (goalmass.getSteps() == INFINITY) return false;	//ゴール地点が未探索なら探索失敗
+
+	// 辿った道のりに印をつける（スタートとゴールは書き換えない）
+	auto current = goalmass.getParent();
+	while (current != start) {
+		auto& currentmass = mass[current.y][current.x];
+		currentmass.setStatus(Mass::WAYPOINT);
+		current = currentmass.getParent();
 	}
 
 	return true;

@@ -20,23 +20,25 @@ bool Board::find(const Point& 始点, const Point& 終点, std::vector<std::vect
 {
 	struct ClOSE
 	{
-		Point point;
-		Point before;
+		Point point;//これが示す地点
+		Point before;//直前の地点
 	};
 
 	mass[始点.y][始点.x].set(Mass::START);
 	mass[終点.y][終点.x].set(Mass::GOAL);
-	std::multimap<float, Point> openList;
-	std::vector<ClOSE> closedList;//現在の位置とどこから来たか
-	openList.insert({ 0.0, 始点 });//まずは最初の地点を追加する
 
+	std::multimap<float, Point> openList;//推定値, これの位置
+	std::vector<ClOSE> closedList;
+	openList.insert({ Point::distance(始点, 終点), 始点 });//まずは最初の地点を追加する
 	closedList.push_back({ 始点, 始点 });
+
+	//int count = 0;  //ダイクストラ法の以下のwhileが呼ばれたループ回数は79回でした。A*は36回でした。
 	while (!openList.empty())
 	{
-		//multimapで今最も距離が短い要素をとる
-		float distance = openList.begin()->first;
-
 		Point current = openList.begin()->second;
+		//firstの値は終点までの推定値が足されているので引く
+		float distance = openList.begin()->first - Point::distance(終点, current);
+
 		openList.erase(openList.begin());
 
 		//上下左右を確かめるための固定値
@@ -58,8 +60,8 @@ bool Board::find(const Point& 始点, const Point& 終点, std::vector<std::vect
 				float totalStep = distance + mass[next.x][next.y].getCost();
 
 				closedList.push_back({ next, current });
-				openList.insert({ totalStep , next });
-				//std::cout << next.x << "," << next.y << "を追加した" << "\n";
+				//推定値を与える
+				openList.insert({ totalStep + Point::distance(終点, next) , next });
 			}
 			else if (next == 終点)//ゴールにたどり着いた
 			{
@@ -79,7 +81,6 @@ bool Board::find(const Point& 始点, const Point& 終点, std::vector<std::vect
 				return true;
 			}
 		}
-
 	}
 	return false;
 }

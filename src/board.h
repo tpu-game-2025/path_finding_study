@@ -30,7 +30,20 @@ struct MassInfo {
 };
 
 class Mass {
+private:
+	bool is_closed_=false;
+	Point parent_;
+	int steps_ = -1;
+	
 public:
+	void Visit(const Point parent,Mass & parentMass) {
+		steps_ = parentMass.getStep()+parentMass.getCost();
+		parent_ = parent;
+		 }
+	void close() { is_closed_ = true; }
+	bool isClosed() { return is_closed_; }
+	Point& getParent() { return parent_; }
+	int getStep() { return steps_; }
 	enum status {
 		// 環境
 		BLANK,		// 空間

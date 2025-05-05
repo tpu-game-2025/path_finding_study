@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <queue>
 
 struct Point {
 	int x = -1;

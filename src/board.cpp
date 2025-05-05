@@ -1,4 +1,5 @@
-ï»¿#include "board.h"
+#include "board.h"
+#include <queue>
 
 std::map<Mass::status, MassInfo> Mass::statusData =
 {
@@ -7,7 +8,7 @@ std::map<Mass::status, MassInfo> Mass::statusData =
 	{ WATER, { 3.0f, '~'}},
 	{ ROAD,  { 0.3f, '$'}},
 
-	// å‹•çš„ãªè¦ç´ 
+	// “®“I‚È—v‘f
 	{ START,	{-1.0f, 'S'}},
 	{ GOAL,		{-1.0f, 'G'}},
 	{ WAYPOINT, {-1.0f, 'o'}},
@@ -16,23 +17,61 @@ std::map<Mass::status, MassInfo> Mass::statusData =
 };
 
 
-bool Board::find(const Point& å§‹ç‚¹, const Point& çµ‚ç‚¹, std::vector<std::vector<Mass>> &mass) const
+bool Board::find(const Point& n“_, const Point& I“_, std::vector<std::vector<Mass>>& mass) const
 {
-	mass[å§‹ç‚¹.y][å§‹ç‚¹.x].set(Mass::START);
-	mass[çµ‚ç‚¹.y][çµ‚ç‚¹.x].set(Mass::GOAL);
+	mass[n“_.y][n“_.x].set(Mass::START);
+	mass[I“_.y][I“_.x].set(Mass::GOAL);
 
-	// çµŒè·¯æ¢ç´¢
-	Point ç¾åœ¨ = å§‹ç‚¹;
-	while (ç¾åœ¨ != çµ‚ç‚¹) {
-		// æ­©ã„ãŸå ´æ‰€ã«å°ã‚’ã¤ã‘ã‚‹(è¦‹ã‚„ã™ã•ã®ãŸã‚ã«å§‹ç‚¹ã¯æ›¸ãæ›ãˆãªã„)
-		if (ç¾åœ¨ != å§‹ç‚¹){mass[ç¾åœ¨.y][ç¾åœ¨.x].set(Mass::WAYPOINT);}
+	// Œo˜H’Tõ
+	std::multimap<float,Point> q;
+	mass[n“_.y][n“_.x].visit(n“_, mass[n“_.y][n“_.x]);
+	q.insert({ Point::distance(n“_,I“_), n“_ });
+	while (!q.empty())
+	{
+		Point Œ»İ = q.begin()->second;
+		int distance = mass[Œ»İ.y][Œ»İ.x].getSteps();
+		q.erase(q.begin());
+		mass[Œ»İ.y][Œ»İ.x].close();
+		const static Point ˆÚ“®—Ê[] = { {-1,0},{+1,0},{0,-1},{0,+1} };
 
-		// çµ‚ç‚¹ã«å‘ã‹ã£ã¦æ­©ã
-		if (ç¾åœ¨.x < çµ‚ç‚¹.x) { ç¾åœ¨.x++; continue; }
-		if (çµ‚ç‚¹.x < ç¾åœ¨.x) { ç¾åœ¨.x--; continue; }
-		if (ç¾åœ¨.y < çµ‚ç‚¹.y) { ç¾åœ¨.y++; continue; }
-		if (çµ‚ç‚¹.y < ç¾åœ¨.y) { ç¾åœ¨.y--; continue; }
+		for (const auto& ˆÚ“® : ˆÚ“®—Ê)
+		{
+			Point Ÿ = Œ»İ + ˆÚ“®;;
+			Mass& Ÿ‚Ìƒ}ƒX = mass[Ÿ.y][Ÿ.x];
+
+			if (map_[Ÿ.y][Ÿ.x].canMove() && !Ÿ‚Ìƒ}ƒX.isClosed())
+			{
+				float n“_‚©‚ç‚Ì•à” = static_cast<float>(distance) + Ÿ‚Ìƒ}ƒX.getCost();
+				int ˆÈ‘O‚Ì•à” = Ÿ‚Ìƒ}ƒX.getSteps();
+
+				if (0 <= ˆÈ‘O‚Ì•à”) //Šù‚É–K‚ê‚½
+				{
+					if (ˆÈ‘O‚Ì•à” <= n“_‚©‚ç‚Ì•à”) continue; //ˆÈ‘O‚Ì•û‚ª‹——£‚ª­‚È‚¢
+					
+					//ŒÃ‚¢ƒL[‚Ìíœ(•s“®¬”“_”‚ÌƒL[‚È‚Ì‚ÅŒë·‚ğl—¶‚µ‚Ä‘S’Tõ)
+					for (auto it = q.begin(); it != q.end(); ++it)
+					{
+						if (it->second == Ÿ) { q.erase(it); break; }
+					}
+				}
+				Ÿ‚Ìƒ}ƒX.visit(Œ»İ, Ÿ‚Ìƒ}ƒX);
+				q.insert({ static_cast<float>(n“_‚©‚ç‚Ì•à”) + Point::distance(Ÿ,I“_),Ÿ});
+				if (Ÿ == I“_)
+				{
+					//I“_‚©‚ç‚³‚©‚Ì‚Ú‚Á‚ÄWAYPOINT‚ğİ’è‚·‚é
+					Point& •à‚¢‚½êŠ = mass[I“_.y][I“_.x].getParent();
+
+					while (•à‚¢‚½êŠ != n“_) //•à‚¢‚½êŠ‚Éˆó‚ğ‚Â‚¯‚é(n“_‚Í‘‚«Š·‚¦‚È‚¢)
+					{
+						Mass& m = mass[•à‚¢‚½êŠ.y][•à‚¢‚½êŠ.x];
+						m.set(Mass::WAYPOINT);
+						•à‚¢‚½êŠ = mass[•à‚¢‚½êŠ.y][•à‚¢‚½êŠ.x].getParent();
+					}
+
+					return true;
+				}
+			}
+		}
 	}
-
 	return true;
 }

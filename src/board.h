@@ -7,7 +7,7 @@
 struct Point {
 	int x = -1;
 	int y = -1;
-
+	
 	bool operator == (const Point& rhs) const {
 		return x == rhs.x && y == rhs.y;
 	}
@@ -77,7 +77,7 @@ private:
 			map_[y].resize(横);
 
 			assert(map_data[y].size() == 横);// 整合性チェック
-			for(int x = 0; x < 横; x++) {
+			for (size_t x = 0; x < 横; x++) {
 				map_[y][x].set(map_data[y][x]);
 			}
 		}

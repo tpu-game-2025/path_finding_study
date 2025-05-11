@@ -30,10 +30,23 @@ struct MassInfo {
 };
 
 class Mass {
+private:
+	bool is_closed_ = false;
+	int steps_ = -1;
+	Point parent_;
+
+public:
+	void visit(const Point& parent, Mass& parentMass) {
+		parent_ = parent; steps_ = parentMass.getSteps() + 1;}
+	void close() { is_closed_ = true; }
+	bool isClosed() const { return is_closed_; }
+	int getSteps() { return steps_; }
+	Point& getParent() { return parent_; }
+
 public:
 	enum status {
 		// 環境
-		BLANK,		// 空間
+		BLANK, // 空間
 		WALL,		// 壁通れない
 		WATER,		// 進むのが1/3に遅くなる
 		ROAD,		// 進むのが3倍速い
@@ -45,6 +58,7 @@ public:
 
 		INVALID,	// 無効な値
 	};
+
 private:
 	static std::map<status, MassInfo> statusData;
 	status s_ = BLANK;

@@ -61,7 +61,7 @@ public:
 		steps_ = parentMass.getSteps() + 1;
 	}
 	float getCost() const { return statusData[s_].cost; }
-	void cloase(){is_cloased_ = true;}
+	void close(){is_cloased_ = true;}
 	bool isClosed() const { return is_cloased_; }
 	int getSteps() {return steps_;}
 	bool isVisited() const { return is_visited_; }

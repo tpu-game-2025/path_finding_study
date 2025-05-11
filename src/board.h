@@ -47,9 +47,26 @@ public:
 	};
 private:
 	static std::map<status, MassInfo> statusData;
+	//float getCost() const { return statusData[s_].cost; }
+	bool is_visited_ = false;
+	bool is_cloased_ = false;
+	int steps_ = -1;
+	Point parent_;
 	status s_ = BLANK;
 
 public:
+	void visit(const Point& parent, Mass& parentMass)
+	{
+		parent_ = parent;
+		steps_ = parentMass.getSteps() + 1;
+	}
+	float getCost() const { return statusData[s_].cost; }
+	void close(){is_cloased_ = true;}
+	bool isClosed() const { return is_cloased_; }
+	int getSteps() {return steps_;}
+	bool isVisited() const { return is_visited_; }
+	Point& getParent() { return parent_; }
+
 	void set(status s) { s_ = s; }
 	void set(char c) {// cの文字を持つstatusを検索して設定する（重い）
 		s_ = INVALID;// 見つからなった際の値
@@ -57,9 +74,7 @@ public:
 	}
 
 	const std::string getText() const { return std::string{ statusData[s_].chr}; }
-
 	bool canMove() const { return 0 <= statusData[s_].cost; }
-	float getCost() const { return statusData[s_].cost; }
 };
 
 class Board {

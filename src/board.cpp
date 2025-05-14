@@ -1,38 +1,75 @@
 ﻿#include "board.h"
+#include <queue>
+#include <unordered_map>
 
-std::map<Mass::status, MassInfo> Mass::statusData =
-{
-	{ BLANK, { 1.0f, ' '}},
-	{ WALL,  {-1.0f, '#'}},
-	{ WATER, { 3.0f, '~'}},
-	{ ROAD,  { 0.3f, '$'}},
+bool Board::find(const Point& start, const Point& goal, std::vector<std::vector<Mass>>& mass) const {
+    const std::vector<Point> directions = {
+        { 0, -1 }, { 0, 1 }, { -1, 0 }, { 1, 0 }
+    };
 
-	// 動的な要素
-	{ START,	{-1.0f, 'S'}},
-	{ GOAL,		{-1.0f, 'G'}},
-	{ WAYPOINT, {-1.0f, 'o'}},
+    auto heuristic = [](const Point& a, const Point& b) {
+        int dx = abs(a.x - b.x);
+        int dy = abs(a.y - b.y);
+        return dx + dy;
+        };
 
-	{ INVALID,  {-1.0f, '\0'}},
-};
+    struct Node {
+        Point pos;
+        float cost;
 
+        bool operator>(const Node& other) const {
+            return cost > other.cost;
+        }
+    };
 
-bool Board::find(const Point& 始点, const Point& 終点, std::vector<std::vector<Mass>> &mass) const
-{
-	mass[始点.y][始点.x].set(Mass::START);
-	mass[終点.y][終点.x].set(Mass::GOAL);
+    int h = static_cast<int>(mass.size());
+    int w = static_cast<int>(mass[0].size());
 
-	// 経路探索
-	Point 現在 = 始点;
-	while (現在 != 終点) {
-		// 歩いた場所に印をつける(見やすさのために始点は書き換えない)
-		if (現在 != 始点){mass[現在.y][現在.x].set(Mass::WAYPOINT);}
+    std::priority_queue<Node, std::vector<Node>, std::greater<Node>> open;
+    std::unordered_map<int, Point> came_from;
+    std::unordered_map<int, float> cost_so_far;
 
-		// 終点に向かって歩く
-		if (現在.x < 終点.x) { 現在.x++; continue; }
-		if (終点.x < 現在.x) { 現在.x--; continue; }
-		if (現在.y < 終点.y) { 現在.y++; continue; }
-		if (終点.y < 現在.y) { 現在.y--; continue; }
-	}
+    auto encode = [w](const Point& p) { return p.y * w + p.x; };
 
-	return true;
+    open.push({ start, 0 });
+    came_from[encode(start)] = start;
+    cost_so_far[encode(start)] = 0;
+
+    while (!open.empty()) {
+        Point current = open.top().pos;
+        open.pop();
+
+        if (current == goal)
+            break;
+
+        for (const Point& dir : directions) {
+            Point next = current + dir;
+
+            if (next.y < 0 || next.y >= h || next.x < 0 || next.x >= w)
+                continue;
+            if (!mass[next.y][next.x].canMove())
+                continue;
+
+            float move_cost = mass[next.y][next.x].getCost();
+            float new_cost = cost_so_far[encode(current)] + move_cost;
+
+            if (!cost_so_far.count(encode(next)) || new_cost < cost_so_far[encode(next)]) {
+                cost_so_far[encode(next)] = new_cost;
+                float priority = new_cost + heuristic(next, goal);
+                open.push({ next, priority });
+                came_from[encode(next)] = current;
+            }
+        }
+    }
+
+    // 経路の復元
+    Point current = goal;
+    while (current != start) {
+        Point prev = came_from[encode(current)];
+        if (prev == current) break;
+        mass[current.y][current.x].markPath();
+        current = prev;
+    }
+
+    return true;
 }

@@ -3,16 +3,18 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <cmath>
+#include <tuple>
 
 struct Point {
 	int x = -1;
 	int y = -1;
 
-	bool operator == (const Point& rhs) const {
+	bool operator==(const Point& rhs) const {
 		return x == rhs.x && y == rhs.y;
 	}
-	// != は == の否定で定義
-	bool operator != (const Point& rhs) const {return !(*this == rhs);}
+	bool operator!=(const Point& rhs) const { return !(*this == rhs); }
+	bool operator<(const Point& rhs) const { return std::tie(y, x) < std::tie(rhs.y, rhs.x); }
 
 	Point operator+(const Point& rhs) const { return { x + rhs.x, y + rhs.y }; }
 
@@ -25,81 +27,101 @@ struct Point {
 };
 
 struct MassInfo {
-	float cost;	// そのマスに行くためのコスト(負ならいけない)
-	char chr;	// 表示用の文字
+	bool isWall = false;
+	bool isPath = false;
+	char type;
+	float cost;
+	char chr;
 };
 
 class Mass {
 public:
 	enum status {
-		// 環境
-		BLANK,		// 空間
-		WALL,		// 壁通れない
-		WATER,		// 進むのが1/3に遅くなる
-		ROAD,		// 進むのが3倍速い
-
-		// 動的な要素
-		START,		// 始点
-		GOAL,		// ゴール
-		WAYPOINT,	// 歩いた場所
-
-		INVALID,	// 無効な値
+		BLANK, WALL, WATER, ROAD,
+		START, GOAL, WAYPOINT,
+		INVALID,
 	};
+
 private:
 	static std::map<status, MassInfo> statusData;
 	status s_ = BLANK;
 
 public:
 	void set(status s) { s_ = s; }
-	void set(char c) {// cの文字を持つstatusを検索して設定する（重い）
-		s_ = INVALID;// 見つからなった際の値
-		for (auto& x : statusData) { if (x.second.chr == c) { s_ = x.first; return; } }
+
+	void set(char c) {
+		s_ = INVALID;
+		for (auto& x : statusData) {
+			if (x.second.chr == c) {
+				s_ = x.first;
+				return;
+			}
+		}
 	}
 
-	const std::string getText() const { return std::string{ statusData[s_].chr}; }
+	const std::string getText() const { return std::string{ statusData[s_].chr }; }
 
 	bool canMove() const { return 0 <= statusData[s_].cost; }
 	float getCost() const { return statusData[s_].cost; }
+	bool isWall() const { return !canMove(); }
+
+	void markPath() { s_ = WAYPOINT; }
+
+	static void initStatusData() {
+		statusData = {
+			{ BLANK,    { false, false, ' ', 1.0f, ' ' } },
+			{ WALL,     { true,  false, '#', -1.0f, '#' } },
+			{ WATER,    { false, false, '~', 3.0f, '~' } },
+			{ ROAD,     { false, false, '$', 1.0f / 3.0f, '$' } },
+			{ START,    { false, false, 'S', 1.0f, 'S' } },
+			{ GOAL,     { false, false, 'G', 1.0f, 'G' } },
+			{ WAYPOINT, { false, true,  '*', 1.0f, '*' } },
+		};
+	}
 };
+
+inline std::map<Mass::status, MassInfo> Mass::statusData;
 
 class Board {
 private:
 	std::vector<std::vector<Mass>> map_;
 
-	void initialize(const std::vector<std::string> &map_data)
+	void initialize(const std::vector<std::string>& map_data)
 	{
-		size_t 縦 = map_data.size();
-		size_t 横 = map_data[0].size();
+		size_t h = map_data.size();
+		size_t w = map_data[0].size();
 
-		map_.resize(縦);
-		for (unsigned int y = 0; y < 縦; y++)
-		{
-			map_[y].resize(横);
+		map_.resize(h);
+		for (unsigned int y = 0; y < h; y++) {
+			map_[y].resize(w);
 
-			assert(map_data[y].size() == 横);// 整合性チェック
-			for(int x = 0; x < 横; x++) {
+			assert(map_data[y].size() == w);
+			for (int x = 0; x < w; x++) {
 				map_[y][x].set(map_data[y][x]);
 			}
 		}
 	}
 
 public:
-	Board(const std::vector<std::string>& map_data) {initialize(map_data);}
+	Board(const std::vector<std::string>& map_data) {
+		Mass::initStatusData(); // ← 必ず初期化
+		initialize(map_data);
+	}
 	~Board() {}
 
-	// massの準備(サイズを設定して、map_をコピー)
 	std::vector<std::vector<Mass>> setup()
 	{
 		std::vector<std::vector<Mass>> mass;
 
-		size_t 縦 = map_.size();
-		size_t 横 = map_[0].size();
+		size_t h = map_.size();
+		size_t w = map_[0].size();
 
-		mass.resize(縦);
-		for (unsigned int y = 0; y < 縦; y++)
-		{
-			mass[y].resize(横);
-			std::copy(map_[y].begin(), map_[y].end(), mass[y].begin());
+		mass.resize(h);
+		for (unsigned int y = 0; y < h; y++) {
+			mass[y].resize(w);
+			for (unsigned int x = 0; x < w; x++) {
+				mass[y][x].set(map_[y][x].getText()[0]);
+			}
 		}
 
 		return mass;
@@ -107,23 +129,20 @@ public:
 
 	void show(const std::vector<std::vector<Mass>>& mass) const
 	{
-		size_t 縦 = mass.size();
-		size_t 横 = mass[0].size();
+		size_t h = mass.size();
+		size_t w = mass[0].size();
 
-		std::cout << std::endl;// 上を空ける
-
-		for (unsigned int y = 0; y < 縦; y++) {
-			std::cout << " ";// 左を空ける
-
-			// 各マスの表示
-			for (unsigned int x = 0; x < 横; x++) {
+		std::cout << std::endl;
+		for (unsigned int y = 0; y < h; y++) {
+			std::cout << " ";
+			for (unsigned int x = 0; x < w; x++) {
 				std::cout << mass[y][x].getText();
 			}
 			std::cout << std::endl;
 		}
-		std::cout << std::endl;// 下を空ける
+		std::cout << std::endl;
 	}
 
-	// 経路探索！
 	bool find(const Point& start, const Point& goal, std::vector<std::vector<Mass>>& mass) const;
 };
+
